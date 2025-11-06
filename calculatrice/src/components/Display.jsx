@@ -1,4 +1,4 @@
-import './Calculator.css';
+import '../ressources/Calculator.css';
 
 function Display({value}) {
     return (
