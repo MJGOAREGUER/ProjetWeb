@@ -10,26 +10,41 @@ export function tokenize(expr){
         
         if(isSpace(c)){ i++; continue; }
 
-        if (isDigit(c) || c === '.'){
+        if (isDigit(c) || c === '.') {
             let start = i;
             let countDot = c === '.' ? 1 : 0;
+            let hasDigit = isDigit(c);
             i++;
-
-            while(i < expr.length){
+            
+            while (i < expr.length) {
                 const d = expr[i];
-                if (isDigit(d)){ i++; continue;}
-                if (d === '.'){
-                    countDot++;
-                    if (countDot > 1) throw new Error("Nombre invalide (plusieurs points)");
-                    i++;
-                    continue;
+                if (isDigit(d)) { hasDigit = true; i++; continue; }
+                if (d === '.') {
+                countDot++;
+                if (countDot > 1) throw new Error("Nombre invalide (plusieurs points)");
+                i++;
+                continue;
                 }
                 break;
             }
-
+            
+            if (!hasDigit) throw new Error("Nombre invalide (aucun chiffre)");
+            
+            if (i < expr.length && (expr[i] === 'e' || expr[i] === 'E')) {
+                let j = i + 1;
+                if (j < expr.length && (expr[j] === '+' || expr[j] === '-')) j++;
+                const expStart = j;
+                while (j < expr.length && isDigit(expr[j])) j++;
+                if (j === expStart) {
+                throw new Error("Nombre invalide (exposant)");
+                }
+                i = j;
+            }
+            
             const numStr = expr.slice(start, i);
-            if(numStr === '.') throw new Error("Nombre invalide (il n'y a qu'un point)");
-            tokens.push({type: "NUMBER", value: parseFloat(numStr)});
+            if (numStr === '.') throw new Error("Nombre invalide (il n'y a qu'un point)");
+            
+            tokens.push({ type: "NUMBER", value: parseFloat(numStr) });
             continue;
         }
 

@@ -33,8 +33,12 @@ function Calculator(){
         }
     }, []);
 
-    const onRemove = useCallback(() => {
+    const onDelete = useCallback(() => {
         setDisplay(prev => (prev.length === 1 ? "0" : prev.slice(0, -1)));
+    }, []);
+
+    const onClear = useCallback(() => {
+        setDisplay("0");
     }, []);
 
     useEffect(() => {
@@ -48,7 +52,7 @@ function Calculator(){
             }else if(e.key === '.') {
                 addDigit('.');
             }else if (e.key === "Backspace"){
-                onRemove();
+                onDelete();
             }else if (e.key === "Escape"){
                 setDisplay('0');
             }
@@ -59,13 +63,13 @@ function Calculator(){
         return () => {
             window.removeEventListener("keydown", handleKey);
         }
-    }, [addDigit, addOperator, onEquals, onRemove]);
+    }, [addDigit, addOperator, onEquals, onDelete, onClear]);
 
 
     return (
-        <div className="bg-white p-6 rounded-xl shadow-lg">
+        <div className="backdrop-blur-md bg-black/15 border border-white/10 p-6 rounded-xl w-80">
             <Display value={display}/>
-            <Keypad onDigit={onDigit} onOperator={onOperator} onEquals={onEquals}/>
+            <Keypad onDigit={onDigit} onOperator={onOperator} onEquals={onEquals} onClear={onClear} onDelete={onDelete}/>
         </div>
     );
 }
