@@ -1,0 +1,6 @@
+#env files
+.env
+.env.local
+
+#useless folder
+node_modules/
