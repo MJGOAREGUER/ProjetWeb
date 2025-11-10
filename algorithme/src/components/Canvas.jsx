@@ -1,73 +1,56 @@
+// Canvas.jsx
 import "../ressources/index.css";
 import "@xyflow/react/dist/style.css";
-import { ReactFlow, Background, Controls, applyNodeChanges } from '@xyflow/react';
+import { ReactFlow, Background, Controls } from "@xyflow/react";
+import { useState } from "react";
 import CorpusNode from "./Nodes/CorpusNode";
-import { useCallback, useState } from "react";
+import MatrixNode from "./Nodes/MatrixNode";
+import { useGraphEngine } from "../engine/useGraphEngine";
 
+const nodeTypes = { corpus: CorpusNode, matrix: MatrixNode };
 
-const nodeTypes = {
-    corpus: CorpusNode
-};
-
-function Canvas(){
- 
-    const [nodes, setNodes] = useState([
+export default function Canvas() {
+  const [nodes, setNodes] = useState([
     {
-        id: "1",
-        type: "corpus",
-        position: { x: 100, y: 120 },
-        data: {
+      id: "c1",
+      type: "corpus",
+      position: { x: 100, y: 120 },
+      data: {
         label: "Corpus 1",
         text: "",
-        onLabelChange: (id, value) => {
-            setNodes((nds) =>
-            nds.map((node) =>
-                node.id === id
-                ? { ...node, data: { ...node.data, label: value } }
-                : node
-            )
-            );
-        },
-        onTextChange: (id, value) => {
-            setNodes((nds) =>
-            nds.map((node) =>
-                node.id === id
-                ? { ...node, data: { ...node.data, text: value } } // ← correct ici
-                : node
-            )
-            );
-        },
-        },
+        onTextChange: (id, value) =>
+          setNodes(nds => nds.map(n => n.id === id ? { ...n, data: { ...n.data, text: value } } : n)),
+      },
     },
-    ]);
+    {
+      id: "m1",
+      type: "matrix",
+      position: { x: 420, y: 120 },
+      data: { loading: false, vocab: [], matrix: [], error: null, lastInfo: "", lastComputedText: "" },
+    },
+  ]);
+  const [edges, setEdges] = useState([]);
 
-    const [edges, setEdges] = useState([]);
+  const { onNodesChange, onEdgesChange, onConnect, isValidConnection } =
+    useGraphEngine(nodes, setNodes, edges, setEdges, /* debounceMs */ 5000);
 
-    const onNodesChange = useCallback(
-        (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
-        []
-    );
-
-    return(
-        <div className="flex-1 relative bg-slate-700">
-            <ReactFlow 
-                nodes={nodes} 
-                edges={edges}
-                nodeTypes={nodeTypes} 
-                onNodesChange={onNodesChange}
-                fitView
-                snapToGrid
-                snapGrid={[10, 10]}
-            >
-                <Controls />
-                <Background 
-                    color="#fff"
-                    gap={22}
-                    variant="dots"
-                />
-            </ReactFlow>
-        </div>
-    );
+  return (
+    <div className="flex-1 relative bg-slate-700">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        isValidConnection={isValidConnection}
+        fitView
+        snapToGrid
+        snapGrid={[10, 10]}
+      >
+        <Controls />
+        <Background color="#fff" gap={22} variant="dots" />
+      </ReactFlow>
+    </div>
+  );
 }
-
-export default Canvas;
