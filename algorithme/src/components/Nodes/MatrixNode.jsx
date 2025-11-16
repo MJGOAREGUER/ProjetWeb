@@ -1,4 +1,3 @@
-// src/Nodes/MatrixNode.jsx
 import { Handle, Position } from "@xyflow/react";
 
 export default function MatrixNode({ id, data = {}, selected }) {
@@ -21,26 +20,25 @@ export default function MatrixNode({ id, data = {}, selected }) {
 
         {vocab.length > 0 && matrix.length > 0 ? (
           <div className="space-y-2">
-            <div className="text-slate-300">Vocab: {vocab.length} | Mat: {matrix.length}×{matrix[0]?.length ?? 0}</div>
-            <div className="max-h-40 overflow-auto rounded border border-slate-700">
-              <table className="w-full text-[11px]">
+            <div className="max-w-[400px] overflow-auto rounded border border-slate-700">
+              <table className="text-[11px] min-w-max">
                 <thead className="sticky top-0 bg-slate-900">
                   <tr>
                     <th className="p-1 text-left">#</th>
-                    {vocab.slice(0,6).map((w,j)=><th key={j} className="p-1 text-left">{w}</th>)}
+                    {vocab.map((w,j)=><th key={j} className="p-1 text-left">{w}</th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {matrix.slice(0,6).map((row,i)=>(
                     <tr key={i} className="odd:bg-slate-900/40">
                       <td className="p-1 text-slate-300">{vocab[i]}</td>
-                      {row.slice(0,6).map((v,j)=><td key={j} className="p-1 tabular-nums">{v}</td>)}
+                      {row.map((v,j)=><td key={j} className="p-1 tabular-nums">{v}</td>)}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="text-slate-500">(Aperçu limité à 6×6)</div>
+            <div className="text-slate-500">Vocab: {vocab.length} | Mat: {matrix.length}×{matrix[0]?.length ?? 0}</div>
           </div>
         ) : !loading && !error && (
           <div className="text-slate-300">Relie à un <b>CorpusNode</b> et assure-toi que le texte n’est pas vide.</div>

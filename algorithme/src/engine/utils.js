@@ -9,7 +9,7 @@ export function edgesToMatrix(vocab, edges) {
   return M;
 }
 
-export async function fetchCooc(text, { window=2, top_k=200 }={}) {
+export async function fetchCooc(text, { window=2, top_k=1000 }={}) {
   const res = await fetch("http://localhost:8000/TLN/cooc", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

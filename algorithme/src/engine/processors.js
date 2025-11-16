@@ -54,7 +54,7 @@ export const processors = {
       )
     );
 
-    const result = await fetchCooc(combinedText, { window: 2, top_k: 200 });
+    const result = await fetchCooc(combinedText, { window: 2, top_k: 100000 });
     const matrix = edgesToMatrix(result.vocab, result.edges ?? []);
 
     setNodes(nds =>
@@ -66,7 +66,7 @@ export const processors = {
                 ...n.data,
                 loading: false,
                 error: null,
-                lastInfo: "OK",
+                lastInfo: "",
                 vocab: result.vocab,
                 matrix,
                 lastComputedText: combinedText,

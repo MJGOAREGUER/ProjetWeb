@@ -20,8 +20,11 @@ def cooc(payload: corpusToMatrixIn):
     if not tokens:
         return corpusToMatrixOut(vocab=[], edges=[])
 
+    # Simple count des mots du textes
     freq = Counter(tokens).most_common(payload.top_k)
+    # On retire le vocabulaire
     vocab = [w for w,_ in freq]
+    # On récupère l'index de la première occurrence d'un mot dans le texte donné
     idx = {w: i for i,w in enumerate(vocab)}
 
     k = len(vocab)
@@ -36,23 +39,24 @@ def cooc(payload: corpusToMatrixIn):
         if w not in idx:
             continue
         i = idx[w]
-        # fenêtre symétrique autour de pos (exclure pos)
+
+        # Fenetre ou l'on regarde qui s'adaptes pour la fin et le début du texte TODO: mettre des marqueurs début fin
         start = max(0, pos - window)
         end   = min(len(tokens), pos + window + 1)
+
         for q in range(start, end):
+            # Si on est sur le mot à évalué
             if q == pos:
                 continue
+
             w2 = tokens[q]
             if w2 not in idx:
                 continue
+
             j = idx[w2]
-            if i == j:
-                continue
-            a, b = (i, j) if i < j else (j, i)  # demi-matrice supérieure
-            cooc.setdefault(a, {}).setdefault(b, 0)
-            cooc[a][b] += 1
 
-    # Conversion en liste d'arêtes (i<j)
+            cooc.setdefault(i, {}).setdefault(j, 0)
+            cooc[i][j] += 1
+
     edges = [{"i": i, "j": j, "count": c} for i, d in cooc.items() for j, c in d.items()]
-
     return corpusToMatrixOut(vocab=vocab, edges=edges)

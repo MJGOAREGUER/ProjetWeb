@@ -32,7 +32,7 @@ function App() {
   const [edges, setEdges] = useState([]);
 
   const { onNodesChange, onEdgesChange, onConnect, isValidConnection } =
-    useGraphEngine(nodes, setNodes, edges, setEdges, 5000);
+    useGraphEngine(nodes, setNodes, edges, setEdges, 500);
 
   // petite helper pour générer des ids
   function makeId(prefix) {

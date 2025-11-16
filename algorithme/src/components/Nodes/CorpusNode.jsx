@@ -10,7 +10,7 @@ function CorpusNode({ id, data = {}, selected }) {
     onIdle,                // (id, text)  => appelé après 5s sans frappe
     onDirtyChange,         // (id, isDirty)
     isDirty = false,       // optionnel: piloté par le parent si tu veux
-    debounceMs = 5000,     // optionnel: délai (par défaut 5s)
+    debounceMs = 500,     // optionnel: délai (par défaut 5s)
   } = data;
 
   const fileInputRef = useRef(null);
@@ -115,7 +115,7 @@ function CorpusNode({ id, data = {}, selected }) {
           title="Glissez un fichier .txt ici"
         >
           <textarea
-            className="w-full h-40 resize-y bg-transparent p-2 text-sm outline-none nodrag nowheel"
+            className="w-full h-40 resize bg-transparent p-2 text-sm outline-none nodrag nowheel scrollbar-corpus"
             placeholder="Écrivez ici ou importez un .txt…"
             value={text}
             onChange={(e) => setText(e.target.value)}
