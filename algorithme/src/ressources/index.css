@@ -16,7 +16,6 @@ body{
   height: 100%;
 }
 
-/* Pour Chrome, Edge, Safari (WebKit) */
 .scrollbar-corpus::-webkit-scrollbar {
   width: 8px;              /* largeur de la barre verticale */
   height: 8px;             /* hauteur si scrollbar horizontale */

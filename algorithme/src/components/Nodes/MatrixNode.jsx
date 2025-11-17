@@ -1,14 +1,34 @@
 import { Handle, Position } from "@xyflow/react";
+import { useState, useMemo } from "react";
 
 export default function MatrixNode({ id, data = {}, selected }) {
   const { vocab = [], matrix = [], loading = false, error = null, lastInfo = "" } = data;
 
-  return (
-    <div className={[
-      "min-w-[280px] min-h-[120px] rounded-xl border shadow-sm",
-      "bg-slate-800/80 border-slate-700 text-slate-100",
-      selected ? "ring-2 ring-indigo-500" : "",
-    ].join(" ")}>
+  const [query, setQuery] = useState("")
+
+  const indexedVocab = useMemo(
+    () => vocab.map((w, i) => ({w, i})),
+    [vocab]
+  );
+
+  const filteredRows = useMemo(() => {
+    if(!query.trim()) return indexedVocab;
+    const q = query.toLowerCase();
+    return indexedVocab.filter(({w}) => w.toLowerCase().includes(q));
+  }, [indexedVocab, query]);
+
+  const visibleRows = filteredRows.slice(0,6);
+  const totalRows = matrix.length;
+  const totalCols = matrix[0]?.length ?? 0;
+
+return (
+    <div
+      className={[
+        "min-w-[280px] min-h-[140px] rounded-xl border shadow-sm",
+        "bg-slate-800/80 border-slate-700 text-slate-100",
+        selected ? "ring-2 ring-indigo-500" : "",
+      ].join(" ")}
+    >
       <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700">
         <span className="text-sm font-semibold">Co-occurrence</span>
         {loading && <span className="text-xs text-slate-300">Calcul…</span>}
@@ -20,32 +40,75 @@ export default function MatrixNode({ id, data = {}, selected }) {
 
         {vocab.length > 0 && matrix.length > 0 ? (
           <div className="space-y-2">
-            <div className="max-w-[400px] overflow-auto rounded border border-slate-700">
+            {/* Champ de recherche */}
+            <input
+              type="text"
+              className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-[11px] outline-none"
+              placeholder="Rechercher un mot (ligne)…"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+            />
+
+            {/* Tableau scrollable mais avec seulement 6 lignes affichées */}
+            <div className="overflow-auto rounded border border-slate-700">
               <table className="text-[11px] min-w-max">
                 <thead className="sticky top-0 bg-slate-900">
                   <tr>
                     <th className="p-1 text-left">#</th>
-                    {vocab.map((w,j)=><th key={j} className="p-1 text-left">{w}</th>)}
+                    {vocab.slice(0,6).map((w, j) => (
+                      <th key={j} className="p-1 text-left">
+                        {w}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {matrix.slice(0,6).map((row,i)=>(
-                    <tr key={i} className="odd:bg-slate-900/40">
-                      <td className="p-1 text-slate-300">{vocab[i]}</td>
-                      {row.map((v,j)=><td key={j} className="p-1 tabular-nums">{v}</td>)}
+                  {visibleRows.map(({ w, i }) => {
+                    const row = matrix[i] || [];
+                    return (
+                      <tr key={i} className="odd:bg-slate-900/40">
+                        <td className="p-1 text-slate-300">{w}</td>
+                        {row.slice(0,6).map((v, j) => (
+                          <td key={j} className="p-1 tabular-nums">
+                            {v}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+
+                  {visibleRows.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={1 + vocab.length}
+                        className="p-2 text-center text-slate-400"
+                      >
+                        Aucune ligne ne correspond à « {query} ».
+                      </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
-            <div className="text-slate-500">Vocab: {vocab.length} | Mat: {matrix.length}×{matrix[0]?.length ?? 0}</div>
+
+            <div className="text-slate-500 flex justify-between">
+              <span>
+                Vocab: {vocab.length} | Mat: {totalRows}×{totalCols}
+              </span>
+            </div>
           </div>
-        ) : !loading && !error && (
-          <div className="text-slate-300">Relie à un <b>CorpusNode</b> et assure-toi que le texte n’est pas vide.</div>
-        )}
+        ) : !loading && !error ? (
+          <div className="text-slate-300">
+            Relie à un <b>CorpusNode</b> et assure-toi que le texte n’est pas vide.
+          </div>
+        ) : null}
       </div>
 
-      <Handle type="target" position={Position.Left} className="!bg-indigo-400" />
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="!bg-indigo-400"
+      />
     </div>
   );
 }
