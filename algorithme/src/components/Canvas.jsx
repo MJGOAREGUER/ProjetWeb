@@ -4,8 +4,9 @@ import "@xyflow/react/dist/style.css";
 import { ReactFlow, Background, Controls } from "@xyflow/react";
 import CorpusNode from "./Nodes/CorpusNode";
 import MatrixNode from "./Nodes/MatrixNode";
+import AutoCompletionNode from "./Nodes/AutoCompletionNode";
 
-const nodeTypes = { corpus: CorpusNode, matrix: MatrixNode };
+const nodeTypes = { corpus: CorpusNode, matrix: MatrixNode, autocompletion: AutoCompletionNode };
 
 export default function Canvas({
   nodes,

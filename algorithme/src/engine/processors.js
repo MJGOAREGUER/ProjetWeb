@@ -1,14 +1,20 @@
-import { edgesToMatrix, fetchCooc } from "./utils";
+import {
+  edgesToMatrix,
+  edgesToContextMatrix,
+  fecthContexte,
+  fetchCooc,
+  fetchCount,
+} from "./utils";
 
 export const processors = {
-  // clé = "sourceType>targetType"
   "corpus>matrix": async ({ sources, tgt, setNodes }) => {
-    // sources = tableau de nodes "corpus" connectés à cette matrix
+    const matrixType = tgt?.data?.params['matrixType'] ?? "cooc";
+    const windowRange = tgt?.data?.params['windowRange'] ?? "";
 
     const texts = (sources ?? [])
       .map(s => s?.data?.text ?? "")
       .map(t => t.trim())
-      .filter(Boolean); // garde seulement les non vides
+      .filter(Boolean);
 
     if (texts.length === 0) {
       setNodes(nds =>
@@ -23,7 +29,9 @@ export const processors = {
                   lastInfo: "Aucun texte connecté",
                   vocab: [],
                   matrix: [],
-                  lastComputedText: "",
+                  lastData: ["", matrixType, windowRange],
+                  contexts: undefined,
+                  params: { matrixType: matrixType, windowRange: windowRange },
                 },
               }
             : n
@@ -32,11 +40,16 @@ export const processors = {
       return;
     }
 
-    // tu peux décider comment combiner les textes :
     const combinedText = texts.join("\n\n---\n\n");
 
-    // anti-boucle: si déjà calculé avec ce combo
-    if (tgt.data?.lastComputedText === combinedText) return;
+    if (
+      tgt.data?.lastData &&
+      tgt.data.lastData[0] === combinedText &&
+      tgt.data.lastData[1] === matrixType &&
+      tgt.data.lastData[2] === windowRange
+    ) {
+      return;
+    }
 
     setNodes(nds =>
       nds.map(n =>
@@ -54,8 +67,34 @@ export const processors = {
       )
     );
 
-    const result = await fetchCooc(combinedText, { window: 2, top_k: 100000 });
-    const matrix = edgesToMatrix(result.vocab, result.edges ?? []);
+    let result;
+    let matrix;
+    let contexts;
+
+    switch (matrixType) {
+      case "cooc":
+        result = await fetchCooc(combinedText, { window: parseInt(windowRange), top_k: 100000 });
+        matrix = edgesToMatrix(result.vocab, result.edges ?? []);
+        break;
+
+      case "count":
+        result = await fetchCount(combinedText, { top_k: 10000 });
+        matrix = result.counts.map(v => [v]);
+        break;
+
+      case "contexte":
+        result = await fecthContexte(combinedText, { window: parseInt(windowRange), top_k: 10000 });
+        ({ matrix, contexts } = edgesToContextMatrix(
+          result.vocab,
+          result.edges ?? []
+        ));
+        break;
+
+      default:
+        result = await fetchCooc(combinedText, { window: windowRange, top_k: 100000, remove_stopwords: false });
+        matrix = edgesToMatrix(result.vocab, result.edges ?? []);
+        break;
+    }
 
     setNodes(nds =>
       nds.map(n =>
@@ -69,12 +108,16 @@ export const processors = {
                 lastInfo: "",
                 vocab: result.vocab,
                 matrix,
-                lastComputedText: combinedText,
+                lastData: [combinedText, matrixType, windowRange],
+                contexts,
+                params: { matrixType: matrixType, windowRange: windowRange },
               },
             }
           : n
       )
     );
   },
+  "matrix>autocompletion": async ({ sources, tgt, setNodes }) => {
+    console.log("OUEP");
+  },
 };
-

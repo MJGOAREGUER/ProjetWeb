@@ -1,3 +1,4 @@
+from re import A
 from pydantic import BaseModel
 from collections import Counter
 from TLN_utils import tokenize
@@ -13,12 +14,12 @@ class corpusToMatrixIn(BaseModel):
 class corpusToMatrixOut(BaseModel):
     vocab: list[str]
     edges: list[dict]
+    counts: list[int]
 
-# Point d'entrée API
 def cooc(payload: corpusToMatrixIn):
     tokens = tokenize(payload.text, payload.lowercase, payload.remove_stopwords)
     if not tokens:
-        return corpusToMatrixOut(vocab=[], edges=[])
+        return corpusToMatrixOut(vocab=[], edges=[], counts=[])
 
     # Simple count des mots du textes
     freq = Counter(tokens).most_common(payload.top_k)
@@ -29,7 +30,7 @@ def cooc(payload: corpusToMatrixIn):
 
     k = len(vocab)
     if k == 0:
-        return corpusToMatrixOut(vocab=[], edges=[])
+        return corpusToMatrixOut(vocab=[], edges=[], counts=[])
 
     window = max(1, int(payload.window))
 
@@ -59,4 +60,64 @@ def cooc(payload: corpusToMatrixIn):
             cooc[i][j] += 1
 
     edges = [{"i": i, "j": j, "count": c} for i, d in cooc.items() for j, c in d.items()]
-    return corpusToMatrixOut(vocab=vocab, edges=edges)
+    return corpusToMatrixOut(vocab=vocab, edges=edges, counts=[])
+
+def count(payload: corpusToMatrixIn):
+    tokens = tokenize(payload.text, payload.lowercase, payload.remove_stopwords)
+    if not tokens:
+        return corpusToMatrixOut(vocab=[], edges=[], counts=[])
+
+    freq = Counter(tokens).most_common(payload.top_k)
+    vocab = [w for w, _ in freq]
+    counts = [c for _, c in freq]
+
+    k = len(vocab)
+    if k == 0:
+        return corpusToMatrixOut(vocab=[], edges=[], counts=[])
+
+    return corpusToMatrixOut(vocab=vocab, edges=[], counts=counts)
+
+def contexte(payload: corpusToMatrixIn):
+    tokens = tokenize(payload.text, payload.lowercase, payload.remove_stopwords)
+    if not tokens:
+        return corpusToMatrixOut(vocab=[], edges=[], counts=[])
+
+    freq = Counter(tokens).most_common(payload.top_k)
+    vocab = [w for w, _ in freq]
+    idx = {w: i for i, w in enumerate(vocab)}
+
+    if not vocab:
+        return corpusToMatrixOut(vocab=[], edges=[], counts=[])
+
+    window = max(1, int(payload.window))
+
+    mat_counts = {}
+
+    for pos in range(window, len(tokens)):
+        target = tokens[pos]
+        if target not in idx:
+            continue
+
+        context_tokens = tokens[pos - window:pos]
+
+        if any(w not in idx for w in context_tokens):
+            continue
+
+        ctx_idx = tuple(idx[w] for w in context_tokens)
+        col = idx[target]  # index du target dans le vocab
+
+        key = (ctx_idx, col)
+        mat_counts[key] = mat_counts.get(key, 0) + 1
+
+    edges = [
+        {
+            "i": list(ctx_idx),  # tuple -> list pour JSON
+            "j": col,
+            "count": c,
+        }
+        for (ctx_idx, col), c in mat_counts.items()
+    ]
+
+    print(edges)
+    return corpusToMatrixOut(vocab=vocab, edges=edges, counts=[])
+

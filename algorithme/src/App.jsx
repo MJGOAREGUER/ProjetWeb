@@ -1,111 +1,32 @@
+import { useState } from "react";
 import Canvas from "./components/Canvas";
 import Menu from "./components/Menu";
-import { useState } from "react";
 import { useGraphEngine } from "./engine/useGraphEngine";
+import { createCorpusNode, createMatrixNode, makeId, INITIAL_NODES } from "./engine/nodeCreation";
+import { attachNodeHandlers } from "./engine/nodeHandler";
 
 function App() {
-  const [nodes, setNodes] = useState([
-    {
-      id: "c1",
-      type: "corpus",
-      position: { x: 100, y: 120 },
-      data: {
-        label: "Corpus 1",
-        text: "",
-      },
-    },
-    {
-      id: "m1",
-      type: "matrix",
-      position: { x: 420, y: 120 },
-      data: {
-        loading: false,
-        vocab: [],
-        matrix: [],
-        error: null,
-        lastInfo: "",
-        lastComputedText: "",
-      },
-    },
-  ]);
-
+  const [nodes, setNodes] = useState(INITIAL_NODES);
   const [edges, setEdges] = useState([]);
 
   const { onNodesChange, onEdgesChange, onConnect, isValidConnection } =
     useGraphEngine(nodes, setNodes, edges, setEdges, 500);
 
-  // petite helper pour générer des ids
-  function makeId(prefix) {
-    return prefix + "_" + Math.random().toString(36).slice(2, 8);
-  }
-
-  // === fonctions appelées depuis le Menu ===
   function addCorpusNode() {
     const id = makeId("c");
-    const newNode = {
-      id,
-      type: "corpus",
-      position: { x: 200, y: 200 }, // tu peux faire mieux (ex: calculer en fonction existants)
-      data: {
-        label: `Corpus ${id}`,
-        text: "",
-      },
-    };
+    const newNode = createCorpusNode(id, 200, 200, `Corpus ${id}`);
     setNodes(prev => [...prev, newNode]);
   }
 
   function addMatrixNode() {
     const id = makeId("m");
-    const newNode = {
-      id,
-      type: "matrix",
-      position: { x: 400, y: 200 },
-      data: {
-        loading: false,
-        vocab: [],
-        matrix: [],
-        error: null,
-        lastInfo: "",
-        lastComputedText: "",
-      },
-    };
+    const newNode = createMatrixNode(id, 400, 200);
     setNodes(prev => [...prev, newNode]);
   }
 
-  function handleTextChange(id, value) {
-    setNodes(nds =>
-      nds.map(n =>
-        n.id === id
-          ? { ...n, data: { ...n.data, text: value } }
-          : n
-      )
-    );
-  }
+  const { nodesWithHandlers } = attachNodeHandlers(nodes, setNodes);
 
-  const handleDirtyChange =(id, dirty) => {
-    setNodes(nds =>
-      nds.map(n =>
-        n.id === id
-          ? { ...n, data: {...n.data, isDirty: dirty} }
-          : n
-      )
-    );
-  };
-
-  const nodesWithHandlers = nodes.map(node =>
-    node.type === "corpus"
-      ? {
-          ...node,
-          data: {
-            ...node.data,
-            onTextChange: handleTextChange,
-            onDirtyChange: handleDirtyChange
-          },
-        }
-      : node
-  );
-
-  const [isMenuOpen, setIsMenuOpen] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <div className="flex h-screen">
