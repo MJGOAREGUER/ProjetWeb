@@ -68,5 +68,5 @@ export const INITIAL_NODES = [
     params: { matrixType: "contexte", windowRange: "2" },
   }),
 
-  createAutoCompletionNode("a1", 800, 250, {}),
+  createAutoCompletionNode("a1", 900, 130, {}),
 ];

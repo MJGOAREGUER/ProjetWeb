@@ -15,7 +15,6 @@ export function edgesToMatrix(vocab, edges) {
   return M;
 }
 
-// utils.js
 export function edgesToContextMatrix(vocab, edges) {
   if (!edges || edges.length === 0) {
     return { matrix: [], contexts: [] };
@@ -62,6 +61,24 @@ export function edgesToContextMatrix(vocab, edges) {
   return { matrix: M, contexts };
 }
 
+export function encapsulateCompletion({ sources, tgt }) {
+  const matrixNode = sources?.[0];
+  const matrixData = matrixNode?.data ?? {};
+  const targetData = tgt?.data ?? [];
+
+  return {
+    model: targetData.type ?? "ngrams",
+    text: targetData.text ?? "",
+    params: {
+      vocab: matrixData.vocab ?? [],
+      contexts: matrixData.contexts ?? [],
+      matrix: matrixData.matrix ?? [],
+      matrixType: matrixData.params?.matrixType ?? "contexte",
+      windowRange: Number(matrixData.params?.windowRange ?? 2),
+    },
+  };
+}
+
 export async function fetchCooc(text, { window=2, top_k=1000 }={}) {
   const res = await fetch("http://localhost:8000/TLN/cooc", {
     method: "POST",
@@ -88,6 +105,17 @@ export async function fecthContexte(text, { window=3, top_k=1000, remove_stopwor
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text: text ?? "", window, top_k, lowercase: true, remove_stopwords}),
+  });
+
+  if(!res.ok) throw new Error(`API ${res.status}: ${await res.text().catch(() => res.statusText)}`);
+  return res.json();
+}
+
+export async function fetchPrediction(text, data) {
+  const res = await fetch("http://localhost:8000/TLN/prediction", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: text ?? "", data }),
   });
 
   if(!res.ok) throw new Error(`API ${res.status}: ${await res.text().catch(() => res.statusText)}`);

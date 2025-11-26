@@ -85,6 +85,16 @@ export function attachNodeHandlers(nodes, setNodes, deps = {}) {
         },
       };
     }
+    if (node.type === "autocompletion"){
+        return {
+            ...node,
+            data: {
+                ...node.data,
+                onTextChange: handleTextChange,
+                onDirtyChange: handleDirtyChange,
+            }
+        }
+    }
     return node;
   });
 

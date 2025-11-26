@@ -36,3 +36,7 @@ def contexte_endpoint(payload: tln.corpusToMatrixIn):
         return tln.contexte(payload)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/TLN/prediction")
+def prediction_endpoint():
+    print('ici')

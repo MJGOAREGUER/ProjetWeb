@@ -1,9 +1,11 @@
 import {
   edgesToMatrix,
   edgesToContextMatrix,
+  encapsulateCompletion,
   fecthContexte,
   fetchCooc,
   fetchCount,
+  fetchPrediction,
 } from "./utils";
 
 export const processors = {
@@ -118,6 +120,74 @@ export const processors = {
     );
   },
   "matrix>autocompletion": async ({ sources, tgt, setNodes }) => {
-    console.log("OUEP");
+    const completionType = tgt?.data?.params?.["type"] ?? "ngrams";
+    const text = (tgt?.data?.text ?? "").trim();
+
+    if (text.length === 0) {
+      setNodes(nds =>
+        nds.map(n =>
+          n.id === tgt.id
+            ?{
+              ...n,
+              data: {
+                ...n.data,
+                loading: false,
+                lastData: [completionType, ""],
+                params: { type: completionType },
+              }
+            }
+            : n
+        )
+      );
+    }
+
+    if (
+      tgt.data?.lastData &&
+      tgt.data.lastData[0] === completionType &&
+      tgt.data.lastData[1] === text
+    ){
+      return;
+    }
+
+    setNodes(nds =>
+      nds.map(n =>
+       n.id === tgt.id
+        ? {
+          ...n,
+          data: {
+            ...n.data,
+            loading: true,
+          }
+        } 
+        : n
+      )
+    );
+
+    let prediction;
+
+    switch (completionType){
+      case "ngrams":
+        let data = encapsulateCompletion({sources, tgt});
+        prediction = await fetchPrediction(text, data);
+        break;
+    }
+ 
+    setNodes(nds =>
+      nds.map(n =>
+       n.id === tgt.id
+        ? {
+          ...n,
+          data: {
+            ...n.data,
+            loading: false,
+            lastData: [completionType, text],
+            params: { type: completionType },
+          }
+        } 
+        : n
+      )
+    );
+
+
   },
 };
