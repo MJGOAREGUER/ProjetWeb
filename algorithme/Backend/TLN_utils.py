@@ -1,4 +1,7 @@
 import re
+from typing import List, Literal
+from pydantic import BaseModel
+
 
 TOKEN_RE = re.compile(r"\b\w+\b", re.UNICODE)
 

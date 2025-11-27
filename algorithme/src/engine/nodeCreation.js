@@ -5,7 +5,7 @@ export const BASE_MATRIX_DATA = {
     error: null,
     lastInfo: "",
     lastData: ["", "cooc", "2"],
-    params: { matrixType: "cooc", windowRange: "2" },
+    params: { matrixType: "cooc", windowRange: "2", update: false },
 };
 
 export function makeId(prefix){
@@ -53,19 +53,19 @@ export const INITIAL_NODES = [
   createMatrixNode("m1", 420, 80, {
     title: "Matrice de Co-occurence",
     lastData: ["", "cooc", "2"],
-    params: { matrixType: "cooc", windowRange: "2" },
+    params: { matrixType: "cooc", windowRange: "2", update: false },
   }),
 
   createMatrixNode("m2", 420, 250, {
     title: "Matrice de Comptage",
     lastData: ["", "count", ""],
-    params: { matrixType: "count", windowRange: "" },
+    params: { matrixType: "count", windowRange: "", update: false },
   }),
 
   createMatrixNode("m3", 420, -80, {
     title: "Matrice de Contexte",
     lastData: ["", "contexte", "2"],
-    params: { matrixType: "contexte", windowRange: "2" },
+    params: { matrixType: "contexte", windowRange: "2", update: false },
   }),
 
   createAutoCompletionNode("a1", 900, 130, {}),

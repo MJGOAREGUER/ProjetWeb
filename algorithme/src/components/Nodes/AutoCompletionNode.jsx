@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Handle, Position } from "@xyflow/react";
 
 function AutoCompletionNode({ id, data = {}, selected }) {
@@ -7,15 +7,14 @@ function AutoCompletionNode({ id, data = {}, selected }) {
         title = "AutoCompletion",
         text = "",
         nextWord = "",
-        lastData = ["ngrams", ""],
-        params = { type: "ngrams"},
-        onTextChange,          // (id, newText)
-        onIdle,                // (id, text)  => appelé après 5s sans frappe
-        onDirtyChange,         // (id, isDirty)
-        isDirty = false,       // optionnel: piloté par le parent si tu veux
-        debounceMs = 500, 
+        onTextChange,
+        onIdle,
+        onDirtyChange,
+        debounceMs = 500,
     } = data;
 
+    const textareaRef = useRef(null);
+    const overlayRef = useRef(null);
     const timerRef = useRef(null);
 
     const setText = useCallback(
@@ -27,23 +26,20 @@ function AutoCompletionNode({ id, data = {}, selected }) {
     );
 
     useEffect(() => {
-        if(timerRef.current) clearTimeout(timerRef.current);
-
+        if (timerRef.current) clearTimeout(timerRef.current);
         timerRef.current = setTimeout(() => {
             onIdle?.(id, text);
             onDirtyChange?.(id, false);
-        }, Math.max(0, debounceMs || 5000));
+        }, debounceMs);
 
-        return () => {
-            if (timerRef.current) clearTimeout(timerRef.current);
-        };
-    }, [id, text, onIdle, onDirtyChange, debounceMs]);
+        return () => clearTimeout(timerRef.current);
+    }, [text, debounceMs, id, onIdle, onDirtyChange]);
 
     return (
         <div
             className={[
                 "min-w-[260px] rounded-xl border shadow-sm",
-                "bg-slate-800/80 border-slate-600 text-slate-100",
+                "bg-slate-800/80 border-slate-600 text-slate-100 relative",
                 selected ? "ring-2 ring-indigo-500" : "",
             ].join(" ")}
         >
@@ -59,15 +55,36 @@ function AutoCompletionNode({ id, data = {}, selected }) {
                 {loading && <span className="text-xs text-slate-300">Calcul...</span>}
             </div>
 
-            <div className="p-3 space-y-2">
-                <textarea
-                    className="w-full h-40 resize bg-slate-900 rounded-md border border-slate-700 p-2 text-sm outline-none nodrag nowheel scrollbar-corpus"
-                    placeholder="Écrivez ici"
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                />
+            <div className="relative p-3 space-y-2">
+
+                {/* CONTAINER */}
+                <div className="relative w-full h-40">
+                    
+                    {/* TEXTAREA REEL */}
+                    <textarea
+                        ref={textareaRef}
+                        className="absolute inset-0 w-full h-full resize bg-slate-900 rounded-md border border-slate-700 p-2 text-sm
+                                   outline-none nodrag nowheel scrollbar-corpus text-slate-100"
+                        placeholder="Écrivez ici"
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                    />
+
+                    {/* GHOST TEXT */}
+                    {nextWord && (
+                        <div
+                            ref={overlayRef}
+                            className="absolute inset-0 pointer-events-none whitespace-pre-wrap select-none p-2 text-sm"
+                            style={{ color: "rgba(200,200,200,0.3)" }} // gris léger
+                        >
+                            <span className="invisible">{text}</span>
+                            <span className="mx-2">{nextWord}</span>
+                        </div>
+                    )}
+                </div>
             </div>
-            <Handle type="target" position={Position.Left} className="!bg-slate-400"  />
+
+            <Handle type="target" position={Position.Left} className="!bg-slate-400" />
         </div>
     );
 }

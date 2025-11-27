@@ -1,6 +1,9 @@
+from ast import mod
 from re import A
 from pydantic import BaseModel
 from collections import Counter
+from dataclasses import dataclass
+from typing import List, Dict, Optional
 from TLN_utils import tokenize
 
 # Masque pour les entrée API
@@ -15,6 +18,34 @@ class corpusToMatrixOut(BaseModel):
     vocab: list[str]
     edges: list[dict]
     counts: list[int]
+
+class matrixPredictionRegisterIn(BaseModel):
+    text: str
+    # Conteneur générique pour tout ce qui concerne le modèle
+    # Exemple actuel :
+    # {
+    #   "model": "ngrams",
+    #   "text": "",
+    #   "params": {
+    #       "vocab": [...],
+    #       "contexts": [...],
+    #       "matrix": [...],
+    #       "matrixType": "contexte",
+    #       "windowRange": 2
+    #   }
+    # }
+    data: dict = {}
+
+
+class matrixPredictionGetIn(BaseModel):
+    text: str
+    # Optionnel : permet de spécifier le modèle à utiliser ou d'autres infos
+    # Ex: { "model": "ngrams" }
+    data: dict = {}
+
+
+class matrixPredictionGetOut(BaseModel):
+    word: str
 
 def cooc(payload: corpusToMatrixIn):
     tokens = tokenize(payload.text, payload.lowercase, payload.remove_stopwords)
@@ -118,6 +149,135 @@ def contexte(payload: corpusToMatrixIn):
         for (ctx_idx, col), c in mat_counts.items()
     ]
 
-    print(edges)
     return corpusToMatrixOut(vocab=vocab, edges=edges, counts=[])
 
+# -------------------------------
+#   Stockage en mémoire
+# -------------------------------
+
+@dataclass
+class NGramModel:
+    vocab: List[str]
+    contexts: List[List[int]]
+    matrix: List[List[float]]
+    matrix_type: str
+    window_range: int
+
+NGRAM_MODELS: Dict[str, NGramModel] = {}
+
+
+# -------------------------------
+#   Logique n-grams
+# -------------------------------
+
+def _predict_with_ngrams(tokens: List[str], model: NGramModel) -> Optional[str]:
+    """
+    Prédit le prochain mot à partir d'une liste de tokens et d'un modèle n-gram.
+    Retourne None si aucune prédiction possible.
+    """
+    if not tokens:
+        return None
+
+    n = model.window_range
+    if n <= 0:
+        return None
+
+    # On prend les n derniers tokens comme contexte
+    ctx_tokens = tokens[-n:]
+
+    # On mappe les tokens en indices du vocabulaire
+    try:
+        ctx_idx = [model.vocab.index(t) for t in ctx_tokens]
+    except ValueError:
+        # Un des tokens n'est pas dans le vocabulaire
+        return None
+
+    # On cherche la ligne correspondante dans contexts
+    row_index = -1
+    for i, ctx in enumerate(model.contexts):
+        if len(ctx) == len(ctx_idx) and all(ctx[j] == ctx_idx[j] for j in range(len(ctx))):
+            row_index = i
+            break
+
+    if row_index == -1:
+        return None
+
+    if row_index < 0 or row_index >= len(model.matrix):
+        return None
+
+    row = model.matrix[row_index]
+    if not row:
+        return None
+
+    # argmax sur la ligne
+    best_col = max(range(len(row)), key=lambda i: row[i])
+
+    if best_col < 0 or best_col >= len(model.vocab):
+        return None
+
+    return model.vocab[best_col]
+
+
+# -------------------------------
+#   Fonctions appelées par FastAPI
+# -------------------------------
+
+def predictionRegister(payload: matrixPredictionRegisterIn):
+    """
+    Enregistre un modèle à partir de payload.data.
+    Actuellement gère le cas 'model': 'ngrams'.
+    """
+    data = payload.data or {}
+    print('ici')
+    model_name = data.get("model", "ngrams")  # par défaut "ngrams"
+    params = data.get("params", {}) or {}
+
+    if model_name == "ngrams":
+        vocab = params.get("vocab", [])
+        contexts = params.get("contexts", [])
+        matrix = params.get("matrix", [])
+        matrix_type = params.get("matrixType", "contexte")
+        window_range = int(params.get("windowRange", 2))
+
+        if not vocab or not matrix:
+            raise ValueError("vocab et matrix ne doivent pas être vides pour le modèle n-grams")
+
+        ngram_model = NGramModel(
+            vocab=vocab,
+            contexts=contexts,
+            matrix=matrix,
+            matrix_type=matrix_type,
+            window_range=window_range,
+        )
+
+        # Pour l’instant on indexe simplement par le nom de modèle
+        NGRAM_MODELS[model_name] = ngram_model
+        return True
+
+    # Plus tard : gérer d'autres modèles ici (transformer, etc.)
+    raise ValueError(f"Modèle '{model_name}' non supporté pour l'enregistrement.")
+
+
+def predictionWord(payload: matrixPredictionGetIn):
+    """
+    Utilise un modèle enregistré pour prédire le prochain mot.
+    Actuellement : n-grams.
+    """
+    tokens = tokenize(payload.text, False, False)
+    if not tokens:
+        return matrixPredictionGetOut(word="")
+
+    data = payload.data or {}
+    model_name = data.get("model", "ngrams")
+
+    model = NGRAM_MODELS.get(model_name)
+    if model is None:
+        # Aucun modèle enregistré pour ce nom
+        print(model)
+        return matrixPredictionGetOut(word="")
+
+    next_word = _predict_with_ngrams(tokens, model)
+    if next_word is None:
+        next_word = ""
+
+    return matrixPredictionGetOut(word=next_word)

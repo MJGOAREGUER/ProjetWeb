@@ -111,11 +111,22 @@ export async function fecthContexte(text, { window=3, top_k=1000, remove_stopwor
   return res.json();
 }
 
-export async function fetchPrediction(text, data) {
-  const res = await fetch("http://localhost:8000/TLN/prediction", {
+export async function fetchPredictionRegister(text, data) {
+  const res = await fetch("http://localhost:8000/TLN/prediction/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: text ?? "", data }),
+    body: JSON.stringify({ text: text ?? "", data: data ?? {}}),
+  });
+
+  if(!res.ok) throw new Error(`API ${res.status}: ${await res.text().catch(() => res.statusText)}`);
+  return res.json();
+}
+
+export async function fetchPredictionGet(text) {
+  const res = await fetch("http://localhost:8000/TLN/prediction/get", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: text ?? "" }),
   });
 
   if(!res.ok) throw new Error(`API ${res.status}: ${await res.text().catch(() => res.statusText)}`);

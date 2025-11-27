@@ -5,13 +5,15 @@ import {
   fecthContexte,
   fetchCooc,
   fetchCount,
-  fetchPrediction,
+  fetchPredictionRegister,
+  fetchPredictionGet,
 } from "./utils";
 
 export const processors = {
   "corpus>matrix": async ({ sources, tgt, setNodes }) => {
     const matrixType = tgt?.data?.params['matrixType'] ?? "cooc";
     const windowRange = tgt?.data?.params['windowRange'] ?? "";
+    const matrixUpdate = tgt?.data?.params['update'] ?? false;
 
     const texts = (sources ?? [])
       .map(s => s?.data?.text ?? "")
@@ -33,7 +35,7 @@ export const processors = {
                   matrix: [],
                   lastData: ["", matrixType, windowRange],
                   contexts: undefined,
-                  params: { matrixType: matrixType, windowRange: windowRange },
+                  params: { matrixType: matrixType, windowRange: windowRange, update: matrixUpdate },
                 },
               }
             : n
@@ -112,7 +114,7 @@ export const processors = {
                 matrix,
                 lastData: [combinedText, matrixType, windowRange],
                 contexts,
-                params: { matrixType: matrixType, windowRange: windowRange },
+                params: { matrixType: matrixType, windowRange: windowRange, update: true },
               },
             }
           : n
@@ -122,6 +124,13 @@ export const processors = {
   "matrix>autocompletion": async ({ sources, tgt, setNodes }) => {
     const completionType = tgt?.data?.params?.["type"] ?? "ngrams";
     const text = (tgt?.data?.text ?? "").trim();
+    const needRegister = sources[0].data.params['update'] ?? false;
+
+    if(needRegister){
+      let data = encapsulateCompletion({sources, tgt});
+      let isGood = await fetchPredictionRegister(text, data);
+      sources[0].data.params['update'] = false;
+    }
 
     if (text.length === 0) {
       setNodes(nds =>
@@ -132,6 +141,7 @@ export const processors = {
               data: {
                 ...n.data,
                 loading: false,
+                nextWord: "",
                 lastData: [completionType, ""],
                 params: { type: completionType },
               }
@@ -167,11 +177,11 @@ export const processors = {
 
     switch (completionType){
       case "ngrams":
-        let data = encapsulateCompletion({sources, tgt});
-        prediction = await fetchPrediction(text, data);
+        prediction = await fetchPredictionGet(text);
+        console.log(text);
         break;
     }
- 
+    console.log(prediction.word)
     setNodes(nds =>
       nds.map(n =>
        n.id === tgt.id
@@ -181,6 +191,7 @@ export const processors = {
             ...n.data,
             loading: false,
             lastData: [completionType, text],
+            nextWord: prediction.word,
             params: { type: completionType },
           }
         } 
