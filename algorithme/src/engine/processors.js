@@ -181,7 +181,7 @@ export const processors = {
         console.log(text);
         break;
     }
-    console.log(prediction.word)
+
     setNodes(nds =>
       nds.map(n =>
        n.id === tgt.id

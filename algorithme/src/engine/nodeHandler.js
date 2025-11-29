@@ -64,6 +64,15 @@ export function attachNodeHandlers(nodes, setNodes, deps = {}) {
     );
   };
 
+  const handleKeys = (id) => (e) => {
+    if(e.key === "Delete") {
+      e.stopPropagation();
+      setNodes(nds =>
+        nds.filter(n => n.id !== id)
+      );
+    }
+  }
+
   const nodesWithHandlers = nodes.map(node => {
     if (node.type === "matrix") {
       return {
@@ -82,6 +91,7 @@ export function attachNodeHandlers(nodes, setNodes, deps = {}) {
           ...node.data,
           onTextChange: handleTextChange,
           onDirtyChange: handleDirtyChange,
+          onKeyDown: handleKeys(node.id),
         },
       };
     }

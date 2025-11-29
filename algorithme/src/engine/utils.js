@@ -100,11 +100,11 @@ export async function fetchCount(text, {top_k= 1000}={}){
   return res.json();
 }
 
-export async function fecthContexte(text, { window=3, top_k=1000, remove_stopwords=false }={}) {
+export async function fecthContexte(text, { window=3, top_k=1000, remove_stopwords=false, add_separator=true }={}) {
   const res = await fetch("http://localhost:8000/TLN/contexte", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: text ?? "", window, top_k, lowercase: true, remove_stopwords}),
+    body: JSON.stringify({ text: text ?? "", window, top_k, lowercase: true, remove_stopwords, add_separator}),
   });
 
   if(!res.ok) throw new Error(`API ${res.status}: ${await res.text().catch(() => res.statusText)}`);

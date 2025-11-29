@@ -1,9 +1,10 @@
 import re
+from tkinter import SEPARATOR
 from typing import List, Literal
 from pydantic import BaseModel
 
 
-TOKEN_RE = re.compile(r"\b\w+\b", re.UNICODE)
+TOKEN_RE = re.compile(r"(?:<\w+>)|(?:\b\w+\b)", re.UNICODE)
 
 STOP = {
     "le","la","les","un","une","des","de","du","au","aux","et","en","dans","pour","par",
@@ -12,9 +13,14 @@ STOP = {
     "the","a","an","of","to","in","on","for","by","and","or","not","is","are","be","as",
 }
 
+SEPARATOR_TOKEN = "<n>"
+START_TOKEN = "<s>"
+END_TOKEN = "<e>"
+
 def tokenize(text: str, lowercase=True, remove_stopwords=True):
     if lowercase:
         text = text.lower()
+    text = text.replace("\n\n---\n\n", "<n>")
     tokens = TOKEN_RE.findall(text)
     if remove_stopwords:
         tokens = [token for token in tokens if token not in STOP and not token.isnumeric()]

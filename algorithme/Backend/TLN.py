@@ -1,18 +1,19 @@
 from ast import mod
 from re import A
+from token import ENDMARKER
 from pydantic import BaseModel
 from collections import Counter
 from dataclasses import dataclass
-from typing import List, Dict, Optional
-from TLN_utils import tokenize
+from typing import List, Dict, Optional, Tuple
+from TLN_utils import tokenize, SEPARATOR_TOKEN, START_TOKEN, END_TOKEN
 
-# Masque pour les entrée API
 class corpusToMatrixIn(BaseModel):
     text: str
     window: int = 2
     top_k: int = 200
     lowercase: bool = True
     remove_stopwords: bool = True
+    add_separator: bool = False
 
 class corpusToMatrixOut(BaseModel):
     vocab: list[str]
@@ -21,43 +22,33 @@ class corpusToMatrixOut(BaseModel):
 
 class matrixPredictionRegisterIn(BaseModel):
     text: str
-    # Conteneur générique pour tout ce qui concerne le modèle
-    # Exemple actuel :
-    # {
-    #   "model": "ngrams",
-    #   "text": "",
-    #   "params": {
-    #       "vocab": [...],
-    #       "contexts": [...],
-    #       "matrix": [...],
-    #       "matrixType": "contexte",
-    #       "windowRange": 2
-    #   }
-    # }
     data: dict = {}
 
 
 class matrixPredictionGetIn(BaseModel):
     text: str
-    # Optionnel : permet de spécifier le modèle à utiliser ou d'autres infos
-    # Ex: { "model": "ngrams" }
     data: dict = {}
-
 
 class matrixPredictionGetOut(BaseModel):
     word: str
 
 def cooc(payload: corpusToMatrixIn):
-    tokens = tokenize(payload.text, payload.lowercase, payload.remove_stopwords)
+    raw_tokens = tokenize(payload.text, payload.lowercase, payload.remove_stopwords)
+
+    if not raw_tokens:
+        return corpusToMatrixOut(vocab=[], edges=[], counts=[])
+
+    # 1) On enlève <n> pour le vocabulaire & la fréquence
+    tokens = [t for t in raw_tokens if t != SEPARATOR_TOKEN]
     if not tokens:
         return corpusToMatrixOut(vocab=[], edges=[], counts=[])
 
-    # Simple count des mots du textes
+    # Simple count des mots du texte (sans <n>)
     freq = Counter(tokens).most_common(payload.top_k)
-    # On retire le vocabulaire
-    vocab = [w for w,_ in freq]
-    # On récupère l'index de la première occurrence d'un mot dans le texte donné
-    idx = {w: i for i,w in enumerate(vocab)}
+
+    # Vocabulaire (sans <n>)
+    vocab = [w for w, _ in freq]
+    idx = {w: i for i, w in enumerate(vocab)}
 
     k = len(vocab)
     if k == 0:
@@ -65,32 +56,52 @@ def cooc(payload: corpusToMatrixIn):
 
     window = max(1, int(payload.window))
 
-    # Compte co-occurrences (format sparse en dict de dicts)
+    # 2) On découpe le texte en segments séparés par <n>
+    segments: list[list[str]] = []
+    current_segment: list[str] = []
+
+    for tok in raw_tokens:
+        if tok == SEPARATOR_TOKEN:
+            if current_segment:
+                segments.append(current_segment)
+                current_segment = []
+        else:
+            current_segment.append(tok)
+
+    if current_segment:
+        segments.append(current_segment)
+
+    # 3) Cooccurrences *à l'intérieur* de chaque segment uniquement
     cooc = {}  # (i -> dict(j->count))
-    for pos, w in enumerate(tokens):
-        if w not in idx:
-            continue
-        i = idx[w]
 
-        # Fenetre ou l'on regarde qui s'adaptes pour la fin et le début du texte TODO: mettre des marqueurs début fin
-        start = max(0, pos - window)
-        end   = min(len(tokens), pos + window + 1)
-
-        for q in range(start, end):
-            # Si on est sur le mot à évalué
-            if q == pos:
+    for seg in segments:
+        for pos, w in enumerate(seg):
+            if w not in idx:
                 continue
+            i = idx[w]
 
-            w2 = tokens[q]
-            if w2 not in idx:
-                continue
+            start = max(0, pos - window)
+            end = min(len(seg), pos + window + 1)
 
-            j = idx[w2]
+            for q in range(start, end):
+                if q == pos:
+                    continue
 
-            cooc.setdefault(i, {}).setdefault(j, 0)
-            cooc[i][j] += 1
+                w2 = seg[q]
+                if w2 not in idx:
+                    continue
 
-    edges = [{"i": i, "j": j, "count": c} for i, d in cooc.items() for j, c in d.items()]
+                j = idx[w2]
+
+                cooc.setdefault(i, {}).setdefault(j, 0)
+                cooc[i][j] += 1
+
+    edges = [
+        {"i": i, "j": j, "count": c}
+        for i, d in cooc.items()
+        for j, c in d.items()
+    ]
+
     return corpusToMatrixOut(vocab=vocab, edges=edges, counts=[])
 
 def count(payload: corpusToMatrixIn):
@@ -109,48 +120,113 @@ def count(payload: corpusToMatrixIn):
     return corpusToMatrixOut(vocab=vocab, edges=[], counts=counts)
 
 def contexte(payload: corpusToMatrixIn):
-    tokens = tokenize(payload.text, payload.lowercase, payload.remove_stopwords)
+    raw_tokens = tokenize(payload.text, payload.lowercase, payload.remove_stopwords)
+    
+    if not raw_tokens:
+        return corpusToMatrixOut(vocab=[], edges=[], counts=[])
+
+    # tokens sans séparateur → pour le vocab
+    tokens = [t for t in raw_tokens if t != SEPARATOR_TOKEN]
     if not tokens:
         return corpusToMatrixOut(vocab=[], edges=[], counts=[])
 
     freq = Counter(tokens).most_common(payload.top_k)
     vocab = [w for w, _ in freq]
-    idx = {w: i for i, w in enumerate(vocab)}
 
     if not vocab:
         return corpusToMatrixOut(vocab=[], edges=[], counts=[])
 
     window = max(1, int(payload.window))
 
-    mat_counts = {}
+    # Ajouter <s> / <e> au vocab SI demandé
+    use_separators = getattr(payload, "add_separator", False)
+    if use_separators:
+        if START_TOKEN not in vocab:
+            vocab.append(START_TOKEN)
+        if END_TOKEN not in vocab:
+            vocab.append(END_TOKEN)
 
-    for pos in range(window, len(tokens)):
-        target = tokens[pos]
-        if target not in idx:
+    # On construit l'index APRES avoir modifié vocab
+    idx = {w: i for i, w in enumerate(vocab)}
+
+    # Découpage en segments
+    segments: List[List[str]] = []
+    current_segment: List[str] = []
+
+    for token in raw_tokens:
+        if token == SEPARATOR_TOKEN:
+            if current_segment:
+                segments.append(current_segment)
+                current_segment = []
+        else:
+            current_segment.append(token)
+
+    if current_segment:
+        segments.append(current_segment)
+
+    mat_counts: Dict[Tuple[Tuple[int, ...], int], int] = {}
+    
+    for seg in segments:
+        n = len(seg)
+        if n == 0:
             continue
 
-        context_tokens = tokens[pos - window:pos]
-
-        if any(w not in idx for w in context_tokens):
+        # Si on n'utilise PAS de padding, on peut ignorer les segments trop courts
+        if not use_separators and n <= window:
             continue
 
-        ctx_idx = tuple(idx[w] for w in context_tokens)
-        col = idx[target]  # index du target dans le vocab
+        for pos in range(n):
+            target = seg[pos]
+            if target not in idx:
+                continue
 
-        key = (ctx_idx, col)
-        mat_counts[key] = mat_counts.get(key, 0) + 1
+            # Construire les tokens de contexte
+            if use_separators:
+                context_tokens: List[str] = []
+                for ctx_pos in range(pos - window, pos):
+                    if ctx_pos < 0:
+                        context_tokens.append(START_TOKEN)
+                    else:
+                        context_tokens.append(seg[ctx_pos])
+            else:
+                if pos < window:
+                    continue
+                context_tokens = seg[pos - window:pos]
+
+            if any(w not in idx for w in context_tokens):
+                continue
+
+            ctx_idx = tuple(idx[w] for w in context_tokens)
+            col = idx[target]
+
+            key = (ctx_idx, col)
+            mat_counts[key] = mat_counts.get(key, 0) + 1
+
+        if use_separators and END_TOKEN in idx:
+            pos = n  
+            context_tokens: List[str] = []
+            for ctx_pos in range(pos - window, pos):
+                if ctx_pos < 0:
+                    context_tokens.append(START_TOKEN)
+                else:
+                    context_tokens.append(seg[ctx_pos])
+
+            if all(w in idx for w in context_tokens):
+                ctx_idx = tuple(idx[w] for w in context_tokens)
+                col = idx[END_TOKEN]
+                key = (ctx_idx, col)
+                mat_counts[key] = mat_counts.get(key, 0) + 1
 
     edges = [
         {
-            "i": list(ctx_idx),  # tuple -> list pour JSON
+            "i": list(ctx_idx),
             "j": col,
             "count": c,
         }
         for (ctx_idx, col), c in mat_counts.items()
     ]
-
+    print(mat_counts)
     return corpusToMatrixOut(vocab=vocab, edges=edges, counts=[])
-
 # -------------------------------
 #   Stockage en mémoire
 # -------------------------------

@@ -11,6 +11,7 @@ function CorpusNode({ id, data = {}, selected }) {
     onDirtyChange,         // (id, isDirty)
     isDirty = false,       // optionnel: piloté par le parent si tu veux
     debounceMs = 500,     // optionnel: délai (par défaut 5s)
+    onKeyDown,
   } = data;
 
   const fileInputRef = useRef(null);
@@ -78,6 +79,8 @@ function CorpusNode({ id, data = {}, selected }) {
 
   return (
     <div
+      tabIndex={0}
+      onKeyDown={onKeyDown}
       className={[
         "min-w-[260px] rounded-xl border shadow-sm",
         "bg-slate-800/80 border-slate-600 text-slate-100",
