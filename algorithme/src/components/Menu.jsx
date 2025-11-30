@@ -1,7 +1,7 @@
 // Menu.jsx
 import "../ressources/index.css";
 
-function Menu({ isOpen, toggleMenu, onAddCorpus, onAddMatrix }) {
+function Menu({ isOpen, toggleMenu, onAddCorpus, onAddMatrix, onAddAutocompletion }) {
   return (
     <>
       <button
@@ -32,6 +32,12 @@ function Menu({ isOpen, toggleMenu, onAddCorpus, onAddMatrix }) {
               onClick={onAddMatrix}
             >
               + Matrix
+            </button>
+            <button 
+              className="bg-slate-500 rounded px-2, py-1 text-sm hover:bg-slate-400"
+              onClick={onAddAutocompletion}
+            >
+              + Autocompletion
             </button>
           </div>
         )}

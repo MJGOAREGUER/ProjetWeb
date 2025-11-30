@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Handle, Position } from "@xyflow/react";
 
 function AutoCompletionNode({ id, data = {}, selected }) {
@@ -13,6 +13,7 @@ function AutoCompletionNode({ id, data = {}, selected }) {
         debounceMs = 500,
     } = data;
 
+    const [isFocused, setIsFocused] = useState(false);
     const textareaRef = useRef(null);
     const overlayRef = useRef(null);
     const timerRef = useRef(null);
@@ -67,11 +68,13 @@ function AutoCompletionNode({ id, data = {}, selected }) {
                                    outline-none nodrag nowheel scrollbar-corpus text-slate-100"
                         placeholder="Écrivez ici"
                         value={text}
-                        onChange={(e) => setText(e.target.value)}
+                        onChange={ (e) => setText(e.target.value) }
+                        onFocus={ () => setIsFocused(true) }
+                        onBlur={ () => setIsFocused(false) }
                     />
 
                     {/* GHOST TEXT */}
-                    {nextWord && (
+                    {nextWord && isFocused && (
                         <div
                             ref={overlayRef}
                             className="absolute inset-0 pointer-events-none whitespace-pre-wrap select-none p-2 text-sm"

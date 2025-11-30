@@ -1,6 +1,7 @@
 from ast import mod
-from re import A
+import re
 from token import ENDMARKER
+from tokenize import TokenError
 from pydantic import BaseModel
 from collections import Counter
 from dataclasses import dataclass
@@ -109,7 +110,9 @@ def count(payload: corpusToMatrixIn):
     if not tokens:
         return corpusToMatrixOut(vocab=[], edges=[], counts=[])
 
-    freq = Counter(tokens).most_common(payload.top_k)
+    filtered_tokens = [ token for token in tokens if not re.fullmatch(r"<[^>]+>",  token)]
+
+    freq = Counter(filtered_tokens).most_common(payload.top_k)
     vocab = [w for w, _ in freq]
     counts = [c for _, c in freq]
 
@@ -225,8 +228,9 @@ def contexte(payload: corpusToMatrixIn):
         }
         for (ctx_idx, col), c in mat_counts.items()
     ]
-    print(mat_counts)
+
     return corpusToMatrixOut(vocab=vocab, edges=edges, counts=[])
+
 # -------------------------------
 #   Stockage en mémoire
 # -------------------------------
@@ -259,6 +263,8 @@ def _predict_with_ngrams(tokens: List[str], model: NGramModel) -> Optional[str]:
         return None
 
     # On prend les n derniers tokens comme contexte
+    tokens = ([START_TOKEN] * n) + tokens
+
     ctx_tokens = tokens[-n:]
 
     # On mappe les tokens en indices du vocabulaire
@@ -304,7 +310,6 @@ def predictionRegister(payload: matrixPredictionRegisterIn):
     Actuellement gère le cas 'model': 'ngrams'.
     """
     data = payload.data or {}
-    print('ici')
     model_name = data.get("model", "ngrams")  # par défaut "ngrams"
     params = data.get("params", {}) or {}
 
@@ -349,7 +354,6 @@ def predictionWord(payload: matrixPredictionGetIn):
     model = NGRAM_MODELS.get(model_name)
     if model is None:
         # Aucun modèle enregistré pour ce nom
-        print(model)
         return matrixPredictionGetOut(word="")
 
     next_word = _predict_with_ngrams(tokens, model)

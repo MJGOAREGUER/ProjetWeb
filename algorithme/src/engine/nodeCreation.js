@@ -48,25 +48,52 @@ export function createMatrixNode(id, x, y, overrides = {}) {
 }
 
 export const INITIAL_NODES = [
-  createCorpusNode("c1", 100, 35, "Corpus 1"),
+  createCorpusNode("c1", 10, 50, "Corpus 1"),
 
-  createMatrixNode("m1", 420, 80, {
+  createMatrixNode("m1", 420, 150, {
     title: "Matrice de Co-occurence",
     lastData: ["", "cooc", "2"],
     params: { matrixType: "cooc", windowRange: "2", update: false },
   }),
 
-  createMatrixNode("m2", 420, 250, {
+  createMatrixNode("m2", 420, 400, {
     title: "Matrice de Comptage",
     lastData: ["", "count", ""],
     params: { matrixType: "count", windowRange: "", update: false },
   }),
 
-  createMatrixNode("m3", 420, -80, {
+  createMatrixNode("m3", 420, -120, {
     title: "Matrice de Contexte",
     lastData: ["", "contexte", "2"],
     params: { matrixType: "contexte", windowRange: "2", update: false },
   }),
 
-  createAutoCompletionNode("a1", 900, 130, {}),
+  createAutoCompletionNode("a1", 900, -105, {
+    title: "Autocompletion test",
+    lastData: ["ngrams", ""],
+    params: { type: "ngrams" },
+  }),
+];
+
+export const INITIAL_EDGES = [
+  {
+    id: "c1-m1",
+    source: "c1",
+    target: "m1",
+  },
+  {
+    id: "c1-m2",
+    source: "c1",
+    target: "m2",
+  },
+  {
+    id: "c1-m3",
+    source: "c1",
+    target: "m3",
+  },
+  {
+    id: "m3-a1",
+    source: "m3",
+    target: "a1",
+  },
 ];

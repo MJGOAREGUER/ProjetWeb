@@ -79,25 +79,38 @@ export default function MatrixNode({ id, data = {}, selected }) {
         {vocab.length > 0 && matrix.length > 0 ? (
           <div className="space-y-2">
             {/* Champ de recherche */}
-            <input
-              type="text"
-              className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-[11px] outline-none"
-              placeholder={
-                matrixType === "contexte"
-                  ? "Rechercher un contexte (ligne)…"
-                  : "Rechercher un mot (ligne)…"
-              }
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-
+            <div className="flex items-center gap-2">
+              <label className="text-[11px] text-slate-400 whitespace-nowrap w-20">
+                {matrixType === "contexte" ? "Contexte :" : "Mot :"}
+              </label>
+              <input
+                type="text"
+                className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-[11px] outline-none"
+                placeholder={
+                  matrixType === "contexte"
+                    ? "Rechercher un contexte (ligne)…"
+                    : "Rechercher un mot (ligne)…"
+                }
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            
             {(matrixType === "contexte" || matrixType === "cooc")
-              ? <input
-                  type="text"
-                  className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-[11px] outline-none"
-                  placeholder="Entrez un nombre pour la fenêtre de sélection"
-                  onChange={(e) => data.onWindowChange?.(id, e.target.value)}
-                />
+              ? 
+                <div className="flex items-center gap-2">
+                  <label className="text-[11px] text-slate-400 whitespace-nowrap w-20">
+                    Fenêtre :
+                  </label>
+
+                  <input
+                    type="text"
+                    value={data.params["windowRange"]}
+                    className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-700 text-[11px] outline-none"
+                    placeholder="Entrez un nombre pour la fenêtre de sélection"
+                    onChange={(e) => data.onWindowChange?.(id, e.target.value)}
+                  />
+                </div>
               : ""
             }
 

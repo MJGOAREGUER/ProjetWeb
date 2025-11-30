@@ -9,6 +9,8 @@ import {
   fetchPredictionGet,
 } from "./utils";
 
+import { PopupAPI } from "../components/Popup";
+
 export const processors = {
   "corpus>matrix": async ({ sources, tgt, setNodes }) => {
     const matrixType = tgt?.data?.params['matrixType'] ?? "cooc";
@@ -126,10 +128,13 @@ export const processors = {
     const text = (tgt?.data?.text ?? "").trim();
     const needRegister = sources[0].data.params['update'] ?? false;
 
-    if(needRegister){
-      let data = encapsulateCompletion({sources, tgt});
-      let isGood = await fetchPredictionRegister(text, data);
-      sources[0].data.params['update'] = false;
+    if( completionType === "ngrams" && sources[0].data.params["matrixType"] != "contexte"){
+      PopupAPI.showPopup({
+        type: "error",
+        title: "Erreur: Compatibilité entre node",
+        message: `La node "${sources[0].data.title}" doit être du type "contexte" pour être compatible avec la node "${tgt.data.title}" du type "ngrams"`,
+        autoCloseMs: 5000,
+      });
     }
 
     if (text.length === 0) {
@@ -150,11 +155,12 @@ export const processors = {
         )
       );
     }
-
+ 
     if (
       tgt.data?.lastData &&
       tgt.data.lastData[0] === completionType &&
-      tgt.data.lastData[1] === text
+      tgt.data.lastData[1] === text &&
+      !needRegister
     ){
       return;
     }
@@ -177,6 +183,12 @@ export const processors = {
 
     switch (completionType){
       case "ngrams":
+        if(needRegister){
+          let data = encapsulateCompletion({sources, tgt});
+          let isGood = await fetchPredictionRegister(text, data);
+          sources[0].data.params['update'] = false;
+        }
+
         prediction = await fetchPredictionGet(text);
         console.log(text);
         break;
