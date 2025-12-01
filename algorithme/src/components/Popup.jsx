@@ -1,4 +1,3 @@
-// Popup.jsx
 import React, {
   createContext,
   useContext,

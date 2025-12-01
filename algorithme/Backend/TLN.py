@@ -360,4 +360,7 @@ def predictionWord(payload: matrixPredictionGetIn):
     if next_word is None:
         next_word = ""
 
+    if next_word == "<e>":
+        next_word = "."
+
     return matrixPredictionGetOut(word=next_word)

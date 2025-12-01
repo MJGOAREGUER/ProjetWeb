@@ -30,7 +30,11 @@ export default function Canvas({
         snapToGrid
         snapGrid={[10, 10]}
       >
-        <Controls />
+        <Controls 
+          position="bottom-right"
+          className="[&>button]:bg-slate-700 [&>button]:text-white [&>button]:hover:bg-slate-600"
+        />
+
         <Background color="#fff" gap={22} variant="dots" />
       </ReactFlow>
     </div>

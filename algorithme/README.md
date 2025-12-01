@@ -17,7 +17,16 @@
 
 # 01/12/2025
 
-* [ ] Améliorer le design du menu
-* [ ] remplacer les <e> multiple par un point et le <s> du reste
+* [X] Améliorer le design du menu
+* [X] remplacer les <e> multiple par un point et le <s> du reste
+* [X] Ne pas autoriser plusieurs matrices de contexte relier à 1 autocompletion (Avec aussi l'impossibilité lors de la liaison en suppriment l'edge)
 
-* [ ] Autoriser plusieurs matrices de contexte relier à 1 autocompletion ?
+# 02//12/2025
+
+* [ ] Commencer à ajouter un menu en dessus d'un node pour paramétrer et les informations
+
+
+* [ ] Améliorer le système d'erreur (stack d'erreur et aussi une meilleur gestion pour le onConnect et est ce qu'on peut synchroniser entre onConnect est processor)
+* [ ] Faire en sorte que la création soit coller au curseur de l'utilisateur ? ou juste que l'élément soit crée au centre de la vue utilisateur
+
+> il me semble qu'il est un bloquage pour le premier mot et dernier

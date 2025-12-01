@@ -88,6 +88,7 @@ export const processors = {
         matrix = result.counts.map(v => [v]);
         break;
 
+
       case "contexte":
         result = await fecthContexte(combinedText, { window: parseInt(windowRange), top_k: 10000 });
         ({ matrix, contexts } = edgesToContextMatrix(
@@ -127,6 +128,15 @@ export const processors = {
     const completionType = tgt?.data?.params?.["type"] ?? "ngrams";
     const text = (tgt?.data?.text ?? "").trim();
     const needRegister = sources[0].data.params['update'] ?? false;
+
+    if(sources.filter(item => item.type === "matrix").length > 1){
+      PopupAPI.showPopup({
+        type: "error",
+        title: "Erreur: Trop de liaison",
+        message: `La node "${tgt.data.title}" ne doit pas avoir de liaison avec plus d'une matrice`,
+        autoCloseMs: 5000,
+      });
+    }
 
     if( completionType === "ngrams" && sources[0].data.params["matrixType"] != "contexte"){
       PopupAPI.showPopup({

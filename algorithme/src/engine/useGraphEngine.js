@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { addEdge, applyEdgeChanges, applyNodeChanges } from "@xyflow/react";
 import { processors } from "./processors";
+import { PopupAPI } from "../components/Popup"; 
 
 const keyFor = (srcType, tgtType) => `${srcType}>${tgtType}`;
 
@@ -23,6 +24,73 @@ export function useGraphEngine(nodes, setNodes, edges, setEdges, debounceMs = 50
   // --- 2) onConnect: on se contente d'ajouter l'edge ---
   // le calcul sera déclenché par l'effet "debounce" plus bas
   const onConnect = useCallback((connection) => {
+    const ns = nodesRef.current;
+    const es = edgesRef.current;
+
+    const src = ns.find(n => n.id === connection.source);
+    const tgt = ns.find(n => n.id === connection.target);
+    if (!src || !tgt) return;
+
+    // 1) Vérifier qu'on a bien un processor
+    const proc =
+      processors[keyFor(src.type, tgt.type)] ||
+      processors[keyFor(tgt.type, src.type)];
+    if (!proc) {
+      // optionnel : popup de types incompatibles
+      PopupAPI.showPopup({
+        type: "error",
+        title: "Connexion invalide",
+        message: `Impossible de relier "${src.data?.title ?? src.id}" à "${tgt.data?.title ?? tgt.id}"`,
+        autoCloseMs: 4000,
+      });
+      return;
+    }
+
+    // 2) Cas particulier matrix <-> autocompletion
+    const matrixNode =
+      src.type === "matrix" ? src :
+      tgt.type === "matrix" ? tgt :
+      null;
+
+    const autoNode =
+      src.type === "autocompletion" ? src :
+      tgt.type === "autocompletion" ? tgt :
+      null;
+
+    if (matrixNode && autoNode) {
+      // a) vérifier qu'il n'y a pas déjà une matrice connectée à cette autocomplétion
+      const connectedMatrices = es
+        .filter(e => e.source === autoNode.id || e.target === autoNode.id)
+        .map(e => (e.source === autoNode.id ? e.target : e.source))
+        .map(id => ns.find(n => n.id === id))
+        .filter(n => n && n.type === "matrix");
+
+      if (connectedMatrices.length >= 1) {
+        PopupAPI.showPopup({
+          type: "error",
+          title: "Erreur : Trop de liaisons",
+          message: `La node "${autoNode.data?.title ?? autoNode.id}" ne peut être liée qu'à une seule matrice.`,
+          autoCloseMs: 5000,
+        });
+        return; // ❌ on N'AJOUTE PAS l'edge
+      }
+
+      // b) compatibilité contexte / ngrams
+      const completionType = autoNode?.data?.params?.["type"] ?? "ngrams";
+      const matrixType = matrixNode?.data?.params?.["matrixType"];
+
+      if (completionType === "ngrams" && matrixType !== "contexte") {
+        PopupAPI.showPopup({
+          type: "error",
+          title: "Erreur : Compatibilité des nodes",
+          message: `La node "${matrixNode.data?.title ?? matrixNode.id}" doit être du type "contexte" pour être compatible avec la node "${autoNode.data?.title ?? autoNode.id}" de type "ngrams".`,
+          autoCloseMs: 5000,
+        });
+        return; // ❌ on N'AJOUTE PAS l'edge
+      }
+    }
+
+    // 3) Si tout est OK, on ajoute l'edge
     const newId = `${connection.source}-${connection.target}`;
     setEdges(eds =>
       eds.some(e => e.id === newId)

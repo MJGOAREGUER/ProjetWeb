@@ -20,7 +20,10 @@ END_TOKEN = "<e>"
 def tokenize(text: str, lowercase=True, remove_stopwords=True):
     if lowercase:
         text = text.lower()
+    # Manage ponctuation
+    text = text.replace(".", "<s>")
     text = text.replace("\n\n---\n\n", "<n>")
+
     tokens = TOKEN_RE.findall(text)
     if remove_stopwords:
         tokens = [token for token in tokens if token not in STOP and not token.isnumeric()]
