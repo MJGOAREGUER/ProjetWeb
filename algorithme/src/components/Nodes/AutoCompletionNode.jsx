@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Handle, Position } from "@xyflow/react";
+import InfoIcon from "../../ressources/images/info.png"
+import SettingsIcon from "../../ressources/images/settings.png"
 
 function AutoCompletionNode({ id, data = {}, selected }) {
     const {
@@ -44,6 +46,28 @@ function AutoCompletionNode({ id, data = {}, selected }) {
                 selected ? "ring-2 ring-indigo-500" : "",
             ].join(" ")}
         >
+            {/* Options */}
+            {selected && (
+                <div className="
+                absolute -top-[30px] right-4 flex items-center gap-2 bg-slate-800
+                ring-2 ring-indigo-500 rounded-t-xl px-3 py-1 test-xs text-slate-100 shadow-lg
+                pointer-eventes-auto
+                "
+                >
+                <button
+                    className="px-2 py-0.5 rounded bg-transparent brightness-[0.60] hover:brightness-150 transition-all duration-150"
+                >
+                    <img src={InfoIcon}  alt="Info" className="w-4 h-4 shrink-0" />
+                </button>
+                <button
+                    className="px-2 py-0.5 rounded bg-transparent brightness-[0.60] hover:brightness-150 transition-all duration-150"
+                >
+                    <img src={SettingsIcon} alt="Paramètres" className="w-4 h-4 shrink-0" />
+                </button> 
+                </div>
+            )}
+
+            {/* Header */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700">
                 <span className="text-sm font-semibold">{title}</span>
 
